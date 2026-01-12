@@ -3,6 +3,7 @@ export type FootageFile = {
     originalName: string;
     file: File;
     previewUrl: string;
+    customName?: string;
 };
 
 export type VirtualFolder = {

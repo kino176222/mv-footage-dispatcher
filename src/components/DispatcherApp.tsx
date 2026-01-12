@@ -39,11 +39,13 @@ import { twMerge } from 'tailwind-merge';
 function SortableFileItem({
     file,
     index,
-    onDelete
+    onDelete,
+    onRename
 }: {
     file: FootageFile;
     index: number;
     onDelete: (id: string) => void;
+    onRename: (id: string, name: string) => void;
 }) {
     const {
         attributes,
@@ -62,6 +64,11 @@ function SortableFileItem({
 
     const isVideo = file.file.type.startsWith('video');
     const isImage = file.file.type.startsWith('image');
+
+    // Prevent drag when interacting with input
+    const onInputPointerDown = (e: React.PointerEvent) => {
+        e.stopPropagation();
+    };
 
     return (
         <div
@@ -123,10 +130,23 @@ function SortableFileItem({
                 )}
             </div>
 
+            {/* Renaming Input */}
+            <div className="w-full mb-1">
+                <input
+                    type="text"
+                    placeholder="Memo..."
+                    value={file.customName || ''}
+                    onChange={(e) => onRename(file.id, e.target.value)}
+                    onPointerDown={onInputPointerDown}
+                    onKeyDown={(e) => e.stopPropagation()}
+                    className="w-full bg-gray-900/50 text-white text-xs px-1 py-0.5 rounded border border-transparent focus:border-blue-500 outline-none text-center placeholder-gray-600"
+                />
+            </div>
+
             {/* Info */}
             <div className="w-full text-xs text-center text-gray-300">
                 <div className="font-mono text-blue-400 font-bold mb-0.5">#{String(index + 1).padStart(3, '0')}</div>
-                <div className="truncate w-full px-1" title={file.originalName}>{file.originalName}</div>
+                <div className="truncate w-full px-1 opacity-50 text-[10px]" title={file.originalName}>{file.originalName}</div>
             </div>
         </div>
     );
@@ -149,6 +169,21 @@ export default function DispatcherApp() {
     );
 
     // --- Handlers ---
+
+    // Add file renaming handler
+    const updateFileCustomName = (fileId: string, name: string) => {
+        setFolders(prev => prev.map(f => {
+            if (f.id === activeFolderId) {
+                return {
+                    ...f,
+                    files: f.files.map(file =>
+                        file.id === fileId ? { ...file, customName: name } : file
+                    )
+                };
+            }
+            return f;
+        }));
+    };
 
     const addFolder = () => {
         const newFolder: VirtualFolder = {
@@ -261,13 +296,20 @@ export default function DispatcherApp() {
                 if (folderRef) {
                     folder.files.forEach((footage, index) => {
                         const extension = footage.originalName.split('.').pop() || 'mp4';
-                        // Renaming logic: FolderName_001.mp4
-                        const newName = `${folder.name}_${String(index + 1).padStart(3, '0')}.${extension}`;
+
+                        // Renaming logic: FolderName_001[_CustomName].mp4
+                        let newName = `${folder.name}_${String(index + 1).padStart(3, '0')}`;
+                        if (footage.customName?.trim()) {
+                            newName += `_${footage.customName.trim()}`;
+                        }
+                        newName += `.${extension}`;
+
                         folderRef.file(newName, footage.file);
                     });
                 }
             }
         });
+
 
         try {
             // Force octet-stream to prevent browser interference
@@ -403,6 +445,7 @@ export default function DispatcherApp() {
                                                 file={file}
                                                 index={index}
                                                 onDelete={deleteFile}
+                                                onRename={updateFileCustomName}
                                             />
                                         ))}
                                     </div>
