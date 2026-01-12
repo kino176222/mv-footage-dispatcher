@@ -86,8 +86,9 @@ function SortableFileItem({
             <div className="w-full aspect-video bg-black rounded mb-2 overflow-hidden flex items-center justify-center">
                 {file.file.type.startsWith('video') ? (
                     <video
-                        src={file.previewUrl}
+                        src={`${file.previewUrl}#t=0.001`}
                         className="w-full h-full object-cover"
+                        preload="metadata"
                         muted
                         loop
                         onMouseOver={(e) => e.currentTarget.play()}
