@@ -53,10 +53,15 @@ function SortableFileItem({
         transition,
     } = useSortable({ id: file.id });
 
+    const [hasError, setHasError] = useState(false);
+
     const style = {
         transform: CSS.Transform.toString(transform),
         transition,
     };
+
+    const isVideo = file.file.type.startsWith('video');
+    const isImage = file.file.type.startsWith('image');
 
     return (
         <div
@@ -82,23 +87,39 @@ function SortableFileItem({
                 <GripVertical size={16} className="text-gray-300" />
             </div>
 
-            {/* Thumbnail */}
-            <div className="w-full aspect-video bg-black rounded mb-2 overflow-hidden flex items-center justify-center">
-                {file.file.type.startsWith('video') ? (
+            {/* Thumbnail / Preview */}
+            <div className="w-full aspect-video bg-black rounded mb-2 overflow-hidden flex items-center justify-center relative">
+                {!hasError && isVideo ? (
                     <video
-                        src={`${file.previewUrl}#t=0.001`}
-                        className="w-full h-full object-cover"
-                        preload="metadata"
+                        src={file.previewUrl}
+                        className="w-full h-full object-cover bg-black"
+                        preload="auto"
                         muted
                         loop
-                        onMouseOver={(e) => e.currentTarget.play()}
-                        onMouseOut={(e) => {
-                            e.currentTarget.pause();
-                            e.currentTarget.currentTime = 0;
+                        playsInline
+                        // specific controls are removed for cleaner look, hover to play remains
+                        onLoadedMetadata={(e) => {
+                            e.currentTarget.currentTime = 0.5;
                         }}
+                        onMouseOver={(e) => e.currentTarget.play().catch(() => { })}
+                        onMouseOut={(e) => e.currentTarget.pause()}
+                        onError={() => setHasError(true)}
+                    />
+                ) : !hasError && isImage ? (
+                    <img
+                        src={file.previewUrl}
+                        alt={file.originalName}
+                        className="w-full h-full object-cover"
+                        onError={() => setHasError(true)}
                     />
                 ) : (
-                    <FileVideo size={32} className="text-gray-500" />
+                    // Fallback for unsupported formats or errors
+                    <div className="flex flex-col items-center justify-center text-gray-500 p-4">
+                        <FileVideo size={32} className="mb-1" />
+                        <span className="text-[10px] uppercase font-mono bg-gray-900 px-1 rounded">
+                            {file.originalName.split('.').pop()}
+                        </span>
+                    </div>
                 )}
             </div>
 
